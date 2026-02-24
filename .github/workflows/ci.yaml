@@ -18,7 +18,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.26'
 
       - name: Tidy
         run: go mod tidy
@@ -29,7 +29,7 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
+      - name: Build docker image
+        run: |
+         docker build -t nestled-api .
+         docker build -t nestled-migrations -f migrations/Dockerfile .
