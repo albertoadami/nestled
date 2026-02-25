@@ -1,13 +1,24 @@
 package handlers
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
 
-type HealthHandler struct{}
+	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+)
 
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+type HealthHandler struct{ db *sqlx.DB }
+
+func NewHealthHandler(db *sqlx.DB) *HealthHandler {
+	return &HealthHandler{db: db}
 }
 
 func (h *HealthHandler) Health(c *gin.Context) {
-	c.Status(204)
+	_, error := h.db.Exec("SELECT 1")
+	if error != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
