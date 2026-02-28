@@ -5,6 +5,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine, healthHandler *handlers.HealthHandler) {
+const ApiPrefix = "/api/v1"
+
+func SetupRoutes(r *gin.Engine, userHandler *handlers.UserHandler, healthHandler *handlers.HealthHandler) {
 	r.GET("/health", healthHandler.Health)
+
+	apiGroup := r.Group(ApiPrefix)
+	apiGroup.POST("/register", userHandler.RegisterUser)
+
 }
