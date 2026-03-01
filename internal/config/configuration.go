@@ -14,8 +14,14 @@ type DatabaseConfig struct {
 	Name     string
 }
 
+type JWTConfig struct {
+	Secret     string `mapstructure:"secret"`
+	Expiration int    `mapstructure:"expiration"`
+}
+
 type Config struct {
 	Database DatabaseConfig
+	JWT      JWTConfig
 }
 
 func LoadConfig() (*Config, error) {
@@ -31,6 +37,8 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("database.user", "DB_USER")
 	viper.BindEnv("database.password", "DB_PASSWORD")
 	viper.BindEnv("database.name", "DB_NAME")
+	viper.BindEnv("jwt.secret", "JWT_SECRET_KEY")
+	viper.BindEnv("jwt.expiration", "JWT_EXPIRE_HOURS")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("fatal error config file: %w", err)

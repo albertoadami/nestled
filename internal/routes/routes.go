@@ -7,10 +7,10 @@ import (
 
 const ApiPrefix = "/api/v1"
 
-func SetupRoutes(r *gin.Engine, userHandler *handlers.UserHandler, healthHandler *handlers.HealthHandler) {
+func SetupRoutes(r *gin.Engine, userHandler *handlers.UserHandler, healthHandler *handlers.HealthHandler, authHandler *handlers.AuthHandler) {
 	r.GET("/health", healthHandler.Health)
 
 	apiGroup := r.Group(ApiPrefix)
 	apiGroup.POST("/register", userHandler.RegisterUser)
-
+	apiGroup.POST("/auth/token", authHandler.GenerateToken)
 }
