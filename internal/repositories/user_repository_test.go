@@ -9,6 +9,7 @@ import (
 	"github.com/albertoadami/nestled/internal/testhelpers"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/stretchr/testify/assert"
 )
 
 func createTestUser() *model.User {
@@ -103,4 +104,44 @@ func TestCreateUserFailedDueToDuplicateEmail(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrEmailAlreadyExists) {
 		t.Fatalf("expected error %v, got %v", apperrors.ErrEmailAlreadyExists, err)
 	}
+}
+
+func TestGetUserByUsernameSucessfully(t *testing.T) {
+
+	db, terminate := testhelpers.SetupPostgres(t)
+	defer terminate()
+	truncateUsers(t, db)
+
+	userRepo := NewUserRepository(db)
+	user := createTestUser()
+	_, err := userRepo.CreateUser(user)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	retrievedUser, err := userRepo.GetUserByUsername(user.Username)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if retrievedUser.Username != user.Username {
+		t.Fatalf("expected username %v, got %v", user.Username, retrievedUser.Username)
+	}
+
+}
+
+func TestGetUserByUsernameFailedDueToNonExistingUser(t *testing.T) {
+
+	db, terminate := testhelpers.SetupPostgres(t)
+	defer terminate()
+	truncateUsers(t, db)
+
+	userRepo := NewUserRepository(db)
+
+	result, err := userRepo.GetUserByUsername("non-existing-username")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	assert.Nil(t, result, "expected result to be nil")
 }

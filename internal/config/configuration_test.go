@@ -22,4 +22,9 @@ func TestLoadConfigSuccessfully(t *testing.T) {
 	assert.Equal(t, dbConfig.Password, "password")
 	assert.Equal(t, dbConfig.Name, "nestled_db")
 
+	jwtConfig := configuration.JWT
+
+	assert.Equal(t, "your_secret_key", jwtConfig.Secret)
+	assert.Equal(t, 6, jwtConfig.Expiration)
+
 }

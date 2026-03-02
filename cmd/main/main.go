@@ -35,12 +35,14 @@ func main() {
 
 	// services
 	userService := services.NewUserService(userRepository)
+	authService := services.NewAuthService(userRepository, configuration.JWT)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService, logger)
 	healthHandler := handlers.NewHealthHandler(database)
+	authHandler := handlers.NewAuthHandler(authService)
 
-	routes.SetupRoutes(r, userHandler, healthHandler)
+	routes.SetupRoutes(r, userHandler, healthHandler, authHandler)
 
 	// Start the server
 	if err := r.Run(); err != nil {

@@ -10,6 +10,7 @@ import (
 
 type UserRepository interface {
 	CreateUser(user *model.User) (uuid.UUID, error)
+	GetUserByUsername(username string) (*model.User, error)
 }
 
 type userRepository struct {
@@ -49,4 +50,16 @@ func (r *userRepository) CreateUser(user *model.User) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func (r *userRepository) GetUserByUsername(username string) (*model.User, error) {
+	query := `SELECT id, username, first_name, last_name, email, password_hash, status
+			  FROM users
+			  WHERE username = $1 AND status != 'BLOCKED'::user_status`
+	var user model.User
+	err := r.db.Get(&user, query, username)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

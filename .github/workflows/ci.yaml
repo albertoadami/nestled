@@ -10,6 +10,8 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      TESTCONTAINER_DOCKER_NETWORK: nestled-testcontainers
 
     steps:
       - name: Checkout
@@ -28,6 +30,9 @@ jobs:
 
       - name: Build
         run: go build ./...
+
+      - name: Create Docker network for testcontainers
+        run: docker network create ${{ env.TESTCONTAINER_DOCKER_NETWORK }}
 
       - name: Test
         run: go test ./...

@@ -13,11 +13,11 @@ const (
 )
 
 type User struct {
-	Id           uuid.UUID
-	Username     string
-	FirstName    string
-	LastName     string
-	Email        string
-	PasswordHash string
-	Status       UserStatus
+	Id           uuid.UUID  `db:"id"`
+	Username     string     `db:"username"`
+	FirstName    string     `db:"first_name"`
+	LastName     string     `db:"last_name"`
+	Email        string     `db:"email"`
+	PasswordHash string     `db:"password_hash"`
+	Status       UserStatus `db:"status"`
 }
