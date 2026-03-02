@@ -15,4 +15,5 @@ func NewErrorResponse(message string, details string) *ErrorResponse {
 const (
 	ErrUsernameAlreadyExists = "username already exists"
 	ErrEmailAlreadyExists    = "email already exists"
+	ErrInvalidToken          = "invalid token"
 )
