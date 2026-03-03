@@ -42,7 +42,7 @@ func main() {
 	healthHandler := handlers.NewHealthHandler(database)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	routes.SetupRoutes(r, userHandler, healthHandler, authHandler)
+	routes.SetupRoutes(r, userHandler, healthHandler, authHandler, configuration.JWT.Secret)
 
 	// Start the server
 	if err := r.Run(); err != nil {

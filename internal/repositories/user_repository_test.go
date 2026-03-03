@@ -139,9 +139,43 @@ func TestGetUserByUsernameFailedDueToNonExistingUser(t *testing.T) {
 	userRepo := NewUserRepository(db)
 
 	result, err := userRepo.GetUserByUsername("non-existing-username")
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	assert.Nil(t, err, "expected err to be nil")
+	assert.Nil(t, result, "expected result to be nil")
+}
+
+func TestGetUserByIdSucessfully(t *testing.T) {
+
+	db, terminate := testhelpers.SetupPostgres(t)
+	defer terminate()
+	truncateUsers(t, db)
+
+	userRepo := NewUserRepository(db)
+	user := createTestUser()
+	_, err := userRepo.CreateUser(user)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 
+	retrievedUser, err := userRepo.GetUserById(user.Id)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if retrievedUser.Username != user.Username {
+		t.Fatalf("expected username %v, got %v", user.Username, retrievedUser.Username)
+	}
+
+}
+
+func TestGetUserByIdFailedDueToNonExistingUser(t *testing.T) {
+
+	db, terminate := testhelpers.SetupPostgres(t)
+	defer terminate()
+	truncateUsers(t, db)
+
+	userRepo := NewUserRepository(db)
+
+	result, err := userRepo.GetUserById(uuid.New())
+	assert.Nil(t, err, "expected err to be nil")
 	assert.Nil(t, result, "expected result to be nil")
 }

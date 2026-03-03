@@ -1,7 +1,10 @@
 package repositories
 
 import (
-	"github.com/albertoadami/nestled/internal/errors"
+	"database/sql"
+	"errors"
+
+	customErrors "github.com/albertoadami/nestled/internal/errors"
 	"github.com/albertoadami/nestled/internal/model"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -11,6 +14,7 @@ import (
 type UserRepository interface {
 	CreateUser(user *model.User) (uuid.UUID, error)
 	GetUserByUsername(username string) (*model.User, error)
+	GetUserById(id uuid.UUID) (*model.User, error)
 }
 
 type userRepository struct {
@@ -41,9 +45,9 @@ func (r *userRepository) CreateUser(user *model.User) (uuid.UUID, error) {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			switch pqErr.Constraint {
 			case "users_username_key":
-				return uuid.Nil, errors.ErrUsernameAlreadyExists
+				return uuid.Nil, customErrors.ErrUsernameAlreadyExists
 			case "users_email_key":
-				return uuid.Nil, errors.ErrEmailAlreadyExists
+				return uuid.Nil, customErrors.ErrEmailAlreadyExists
 			}
 		}
 		return uuid.Nil, err
@@ -59,6 +63,24 @@ func (r *userRepository) GetUserByUsername(username string) (*model.User, error)
 	var user model.User
 	err := r.db.Get(&user, query, username)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) GetUserById(id uuid.UUID) (*model.User, error) {
+	query := `SELECT id, username, first_name, last_name, email, password_hash, status
+			  FROM users
+			  WHERE id = $1 AND status != 'BLOCKED'::user_status`
+	var user model.User
+	err := r.db.Get(&user, query, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
