@@ -2,7 +2,6 @@ package services
 
 import (
 	"github.com/albertoadami/nestled/internal/auth"
-	"github.com/albertoadami/nestled/internal/config"
 	"github.com/albertoadami/nestled/internal/crypto"
 	"github.com/albertoadami/nestled/internal/errors"
 	"github.com/albertoadami/nestled/internal/repositories"
@@ -14,13 +13,13 @@ type AuthService interface {
 
 type authService struct {
 	userRepository repositories.UserRepository
-	JWtConfig      config.JWTConfig
+	authManager    *auth.TokenManager
 }
 
-func NewAuthService(userRepository repositories.UserRepository, jwtConfig config.JWTConfig) AuthService {
+func NewAuthService(userRepository repositories.UserRepository, manager *auth.TokenManager) AuthService {
 	return &authService{
 		userRepository: userRepository,
-		JWtConfig:      jwtConfig,
+		authManager:    manager,
 	}
 }
 
@@ -36,7 +35,7 @@ func (s *authService) GenerateToken(username string, password string) (*auth.Tok
 
 	valid := crypto.CheckPassword(password, user.PasswordHash)
 	if valid {
-		jwtToken, err := auth.GenerateToken(user.Id, s.JWtConfig.Secret, s.JWtConfig.Expiration)
+		jwtToken, err := s.authManager.GenerateToken(user.Id)
 		if err != nil {
 			return nil, err
 		}

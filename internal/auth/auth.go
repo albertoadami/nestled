@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/albertoadami/nestled/internal/config"
 	"github.com/albertoadami/nestled/internal/errors"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -19,8 +20,16 @@ type TokenInfo struct {
 	ExpirationTime time.Time
 }
 
-func GenerateToken(userId uuid.UUID, secretKey string, expireHours int) (*Token, error) {
-	expirationTime := time.Now().Add(time.Hour * time.Duration(expireHours)).Local().UTC()
+type TokenManager struct {
+	jwtConfig config.JWTConfig
+}
+
+func NewTokenManager(jwtConfig config.JWTConfig) *TokenManager {
+	return &TokenManager{jwtConfig: jwtConfig}
+}
+
+func (tm *TokenManager) GenerateToken(userId uuid.UUID) (*Token, error) {
+	expirationTime := time.Now().Add(time.Hour * time.Duration(tm.jwtConfig.Expiration)).Local().UTC()
 
 	claims := jwt.MapClaims{
 		"userId": userId.String(),
@@ -28,7 +37,7 @@ func GenerateToken(userId uuid.UUID, secretKey string, expireHours int) (*Token,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(secretKey))
+	signed, err := token.SignedString([]byte(tm.jwtConfig.Secret))
 
 	if err != nil {
 		return nil, errors.ErrGeneratingToken
@@ -40,12 +49,12 @@ func GenerateToken(userId uuid.UUID, secretKey string, expireHours int) (*Token,
 	}, nil
 }
 
-func ParseToken(tokenValue string, secretKey string) (*TokenInfo, error) {
+func (tm *TokenManager) ParseToken(tokenValue string) (*TokenInfo, error) {
 	token, err := jwt.Parse(tokenValue, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return []byte(secretKey), nil
+		return []byte(tm.jwtConfig.Secret), nil
 	})
 
 	if err != nil || !token.Valid {

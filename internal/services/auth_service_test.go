@@ -3,6 +3,7 @@ package services
 import (
 	"testing"
 
+	"github.com/albertoadami/nestled/internal/auth"
 	"github.com/albertoadami/nestled/internal/config"
 	"github.com/albertoadami/nestled/internal/crypto"
 	"github.com/albertoadami/nestled/internal/errors"
@@ -29,6 +30,8 @@ func (m *mockUserRepo) GetUserByUsername(username string) (*model.User, error) {
 	return m.getFn(username)
 }
 
+var tokenManager = auth.NewTokenManager(config.JWTConfig{Secret: "secret", Expiration: 1})
+
 func TestGenerateToken_UserNotFound(t *testing.T) {
 	mockRepo := &mockUserRepo{
 		getFn: func(username string) (*model.User, error) {
@@ -38,7 +41,7 @@ func TestGenerateToken_UserNotFound(t *testing.T) {
 			return nil, nil
 		},
 	}
-	service := NewAuthService(mockRepo, config.JWTConfig{Secret: "secret", Expiration: 1})
+	service := NewAuthService(mockRepo, tokenManager)
 
 	token, err := service.GenerateToken("noexist", "pwd")
 	assert.Nil(t, token)
@@ -55,7 +58,7 @@ func TestGenerateToken_InvalidPassword(t *testing.T) {
 			return user, nil
 		},
 	}
-	service := NewAuthService(mockRepo, config.JWTConfig{Secret: "secret", Expiration: 1})
+	service := NewAuthService(mockRepo, tokenManager)
 
 	token, err := service.GenerateToken("someuser", "wrong")
 	assert.Nil(t, token)
@@ -71,7 +74,7 @@ func TestGenerateToken_Success(t *testing.T) {
 			return user, nil
 		},
 	}
-	service := NewAuthService(mockRepo, config.JWTConfig{Secret: "secret", Expiration: 1})
+	service := NewAuthService(mockRepo, tokenManager)
 
 	token, err := service.GenerateToken("someuser", "correct")
 	assert.NoError(t, err)

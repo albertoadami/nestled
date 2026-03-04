@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/albertoadami/nestled/internal/auth"
 	"github.com/albertoadami/nestled/internal/config"
 	"github.com/albertoadami/nestled/internal/database"
 	"github.com/albertoadami/nestled/internal/handlers"
@@ -30,19 +31,21 @@ func main() {
 	}
 	defer database.Close()
 
+	tokenManager := auth.NewTokenManager(configuration.JWT)
+
 	// repositories
 	userRepository := repositories.NewUserRepository(database)
 
 	// services
 	userService := services.NewUserService(userRepository)
-	authService := services.NewAuthService(userRepository, configuration.JWT)
+	authService := services.NewAuthService(userRepository, tokenManager)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService, logger)
 	healthHandler := handlers.NewHealthHandler(database)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	routes.SetupRoutes(r, userHandler, healthHandler, authHandler, configuration.JWT.Secret)
+	routes.SetupRoutes(r, userHandler, healthHandler, authHandler, tokenManager)
 
 	// Start the server
 	if err := r.Run(); err != nil {

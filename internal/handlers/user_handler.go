@@ -8,7 +8,6 @@ import (
 	"github.com/albertoadami/nestled/internal/errors"
 	"github.com/albertoadami/nestled/internal/services"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -60,35 +59,22 @@ func (u *UserHandler) RegisterUser(c *gin.Context) {
 }
 
 func (u *UserHandler) GetCurrentUser(c *gin.Context) {
-	userId, exists := c.Get("userId")
-	if !exists {
-		c.Status(http.StatusInternalServerError)
+	userId, ok := getUserIdFromContext(c)
+	if !ok {
 		return
 	}
-	userIdUUID, err := uuid.Parse(userId.(string))
-	if err != nil {
+
+	user, err := u.userService.GetUserById(userId)
+	if err != nil || user == nil {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	user, err := u.userService.GetUserById(userIdUUID)
-	if err != nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	if user == nil {
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	response := &dto.UserResponse{
+	c.JSON(http.StatusOK, &dto.UserResponse{
 		Id:        user.Id.String(),
 		Username:  user.Username,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
 		Email:     user.Email,
-	}
-	c.JSON(http.StatusOK, response)
-
+	})
 }
