@@ -10,6 +10,7 @@ import (
 
 type UserService interface {
 	CreateUser(request *dto.CreateUserRequest) (uuid.UUID, error)
+	GetUserById(id uuid.UUID) (*model.User, error)
 }
 
 type userService struct {
@@ -41,4 +42,8 @@ func (s *userService) CreateUser(request *dto.CreateUserRequest) (uuid.UUID, err
 
 	return s.userRepository.CreateUser(user)
 
+}
+
+func (s *userService) GetUserById(id uuid.UUID) (*model.User, error) {
+	return s.userRepository.GetUserById(id)
 }

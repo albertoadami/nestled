@@ -57,3 +57,24 @@ func (u *UserHandler) RegisterUser(c *gin.Context) {
 	c.Status(http.StatusCreated)
 
 }
+
+func (u *UserHandler) GetCurrentUser(c *gin.Context) {
+	userId, ok := getUserIdFromContext(c)
+	if !ok {
+		return
+	}
+
+	user, err := u.userService.GetUserById(userId)
+	if err != nil || user == nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, &dto.UserResponse{
+		Id:        user.Id.String(),
+		Username:  user.Username,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+	})
+}

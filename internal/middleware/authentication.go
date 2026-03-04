@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func BearerAuthentication(secretKey string) gin.HandlerFunc {
+func BearerAuthentication(tokenManager *auth.TokenManager) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
@@ -20,7 +20,7 @@ func BearerAuthentication(secretKey string) gin.HandlerFunc {
 		}
 
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-		tokenInfo, err := auth.ParseToken(token, secretKey)
+		tokenInfo, err := tokenManager.ParseToken(token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &dto.ErrorResponse{Message: "invalid token"})
 			return

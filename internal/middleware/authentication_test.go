@@ -6,15 +6,19 @@ import (
 	"testing"
 
 	"github.com/albertoadami/nestled/internal/auth"
+	"github.com/albertoadami/nestled/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupMiddlewareRouter(secretKey string) *gin.Engine {
+var tokenManager = auth.NewTokenManager(config.JWTConfig{Secret: "secret", Expiration: 1})
+var expiredTokenManager = auth.NewTokenManager(config.JWTConfig{Secret: "secret", Expiration: -1})
+
+func setupMiddlewareRouter(tokenManager *auth.TokenManager) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(BearerAuthentication(secretKey))
+	router.Use(BearerAuthentication(tokenManager))
 	router.GET("/test", func(c *gin.Context) {
 		userId, _ := c.Get("userId")
 		c.JSON(http.StatusOK, gin.H{"userId": userId})
@@ -23,7 +27,7 @@ func setupMiddlewareRouter(secretKey string) *gin.Engine {
 }
 
 func TestBearerAuthentication_MissingHeader(t *testing.T) {
-	router := setupMiddlewareRouter("secret")
+	router := setupMiddlewareRouter(tokenManager)
 
 	req, _ := http.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -33,7 +37,7 @@ func TestBearerAuthentication_MissingHeader(t *testing.T) {
 }
 
 func TestBearerAuthentication_InvalidToken(t *testing.T) {
-	router := setupMiddlewareRouter("secret")
+	router := setupMiddlewareRouter(tokenManager)
 
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Authorization", "Bearer invalid.token.here")
@@ -44,12 +48,11 @@ func TestBearerAuthentication_InvalidToken(t *testing.T) {
 }
 
 func TestBearerAuthentication_ValidToken(t *testing.T) {
-	secretKey := "secret"
 	userId := uuid.New()
 
-	token, _ := auth.GenerateToken(userId, secretKey, 6)
+	token, _ := tokenManager.GenerateToken(userId)
 
-	router := setupMiddlewareRouter(secretKey)
+	router := setupMiddlewareRouter(tokenManager)
 
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+token.Value)
@@ -60,13 +63,12 @@ func TestBearerAuthentication_ValidToken(t *testing.T) {
 }
 
 func TestBearerAuthentication_ExpiredToken(t *testing.T) {
-	secretKey := "secret"
 	userId := uuid.New()
 
 	// generate token already expired (-1 hour)
-	token, _ := auth.GenerateToken(userId, secretKey, -1)
+	token, _ := expiredTokenManager.GenerateToken(userId)
 
-	router := setupMiddlewareRouter(secretKey)
+	router := setupMiddlewareRouter(expiredTokenManager)
 
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+token.Value)
