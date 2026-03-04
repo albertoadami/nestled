@@ -26,7 +26,7 @@ func SetupPostgres(t *testing.T) (*sqlx.DB, func()) {
 			"POSTGRES_PASSWORD": "testpass",
 			"POSTGRES_DB":       "testdb",
 		},
-		WaitingFor: wait.ForListeningPort("5432/tcp"),
+		WaitingFor: wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 	}
 
 	postgres, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
