@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/albertoadami/nestled/internal/crypto"
 	"github.com/albertoadami/nestled/internal/dto"
+	"github.com/albertoadami/nestled/internal/errors"
 	"github.com/albertoadami/nestled/internal/model"
 	"github.com/albertoadami/nestled/internal/repositories"
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 type UserService interface {
 	CreateUser(request *dto.CreateUserRequest) (uuid.UUID, error)
 	GetUserById(id uuid.UUID) (*model.User, error)
+	ChangePassword(user *model.User, currentPassword string, newPassword string) error
 }
 
 type userService struct {
@@ -40,10 +42,27 @@ func (s *userService) CreateUser(request *dto.CreateUserRequest) (uuid.UUID, err
 		Status:       model.UserStatusPending,
 	}
 
-	return s.userRepository.CreateUser(user)
+	return s.userRepository.Create(user)
 
 }
 
 func (s *userService) GetUserById(id uuid.UUID) (*model.User, error) {
 	return s.userRepository.GetUserById(id)
+}
+
+func (s *userService) ChangePassword(user *model.User, currentPassword string, newPassword string) error {
+	if !crypto.CheckPassword(currentPassword, user.PasswordHash) {
+		return errors.ErrInvalidPassword
+	}
+
+	// generate the new hash for the new password
+	hashedPassword, err := crypto.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = hashedPassword
+
+	return s.userRepository.Update(user)
+
 }

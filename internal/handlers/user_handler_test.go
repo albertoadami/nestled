@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"encoding/json"
+
+	"github.com/albertoadami/nestled/internal/crypto"
 
 	"github.com/albertoadami/nestled/internal/dto"
 	"github.com/albertoadami/nestled/internal/errors"
@@ -20,8 +23,9 @@ import (
 )
 
 type mockUserService struct {
-	createUserFn func(req *dto.CreateUserRequest) (uuid.UUID, error)
-	getByIdFn    func(id uuid.UUID) (*model.User, error)
+	createUserFn      func(req *dto.CreateUserRequest) (uuid.UUID, error)
+	getByIdFn         func(id uuid.UUID) (*model.User, error)
+	returnUpdateError bool
 }
 
 func (m *mockUserService) CreateUser(req *dto.CreateUserRequest) (uuid.UUID, error) {
@@ -30,6 +34,14 @@ func (m *mockUserService) CreateUser(req *dto.CreateUserRequest) (uuid.UUID, err
 
 func (m *mockUserService) GetUserById(id uuid.UUID) (*model.User, error) {
 	return m.getByIdFn(id)
+}
+
+func (m *mockUserService) ChangePassword(user *model.User, currentPassword string, newPassword string) error {
+	if m.returnUpdateError {
+		return errors.CredentialsInvalid
+	} else {
+		return nil
+	}
 }
 
 func setupUserRouter(mockService *mockUserService) *gin.Engine {
@@ -46,6 +58,7 @@ func setUpUserProfileRouter(mockService *mockUserService, userId uuid.UUID) *gin
 	handler := NewUserHandler(mockService, zap.NewNop())
 	// apply mock authentication as middleware before the handler
 	router.GET("/api/v1/users/me", testhelpers.MockAuthentication(userId), handler.GetCurrentUser)
+	router.PATCH("/api/v1/users/me/password", testhelpers.MockAuthentication(userId), handler.ChangePassword)
 	return router
 }
 
@@ -154,4 +167,77 @@ func TestUserProfileSuccessfully(t *testing.T) {
 	expectedJSON, err := json.Marshal(expected)
 	assert.NoError(t, err)
 	assert.JSONEq(t, string(expectedJSON), w.Body.String())
+}
+
+func TestChangePasswordCorrectly(t *testing.T) {
+
+	userId := uuid.New()
+	passwordHash, _ := crypto.HashPassword("oldpassword")
+
+	mockService := &mockUserService{
+		getByIdFn: func(id uuid.UUID) (*model.User, error) {
+			if id == userId {
+				return &model.User{
+					Id:           userId,
+					Username:     "test",
+					Email:        "test@test.it",
+					FirstName:    "Test",
+					LastName:     "User",
+					PasswordHash: passwordHash,
+				}, nil
+			}
+			return nil, nil
+		},
+	}
+	router := setUpUserProfileRouter(mockService, userId)
+
+	passwordRequest := &dto.ChangePasswordRequest{
+		CurrentPassword: "oldpassword",
+		NewPassword:     "newpassword123",
+	}
+	body, _ := json.Marshal(passwordRequest)
+
+	req, _ := http.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+}
+
+func TestChangePasswordInvalidCurrentPassword(t *testing.T) {
+
+	userId := uuid.New()
+	mockService := &mockUserService{
+		getByIdFn: func(id uuid.UUID) (*model.User, error) {
+			if id == userId {
+				return &model.User{
+					Id:           userId,
+					Username:     "test",
+					Email:        "test@test.it",
+					FirstName:    "Test",
+					LastName:     "User",
+					PasswordHash: "blablah",
+				}, nil
+			}
+			return nil, nil
+		},
+		returnUpdateError: true,
+	}
+	router := setUpUserProfileRouter(mockService, userId)
+
+	passwordRequest := &dto.ChangePasswordRequest{
+		CurrentPassword: "wrong_password",
+		NewPassword:     "newpassword123",
+	}
+	body, _ := json.Marshal(passwordRequest)
+
+	req, _ := http.NewRequest("PATCH", "/api/v1/users/me/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
 }

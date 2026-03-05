@@ -78,3 +78,37 @@ func (u *UserHandler) GetCurrentUser(c *gin.Context) {
 		Email:     user.Email,
 	})
 }
+
+func (u *UserHandler) ChangePassword(c *gin.Context) {
+	var request dto.ChangePasswordRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	userId, ok := getUserIdFromContext(c)
+	if !ok {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	user, err := u.userService.GetUserById(userId)
+	if err != nil || user == nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	err = u.userService.ChangePassword(user, request.CurrentPassword, request.NewPassword)
+	if err != nil {
+		switch err {
+		case errors.CredentialsInvalid:
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse(err.Error(), "Current password is incorrect"))
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
+
+}

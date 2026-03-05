@@ -9,4 +9,5 @@ var (
 	CredentialsInvalid       = errors.New("invalid credentials")
 	ErrInvalidToken          = errors.New("invalid token")
 	ErrGeneratingToken       = errors.New("error generating token")
+	ErrInvalidPassword       = errors.New("invalid password")
 )

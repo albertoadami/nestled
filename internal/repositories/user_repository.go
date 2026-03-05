@@ -12,7 +12,8 @@ import (
 )
 
 type UserRepository interface {
-	CreateUser(user *model.User) (uuid.UUID, error)
+	Create(user *model.User) (uuid.UUID, error)
+	Update(user *model.User) error
 	GetUserByUsername(username string) (*model.User, error)
 	GetUserById(id uuid.UUID) (*model.User, error)
 }
@@ -25,7 +26,7 @@ func NewUserRepository(db *sqlx.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) CreateUser(user *model.User) (uuid.UUID, error) {
+func (r *userRepository) Create(user *model.User) (uuid.UUID, error) {
 	query := `INSERT INTO users (id, username, first_name, last_name, email, password_hash, status)
               VALUES ($1, $2, $3, $4, $5, $6, $7)
               RETURNING id`
@@ -84,4 +85,20 @@ func (r *userRepository) GetUserById(id uuid.UUID) (*model.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepository) Update(user *model.User) error {
+	query := `UPDATE users
+			  SET username = $1, first_name = $2, last_name = $3, email = $4, password_hash = $5, status = $6, updated_at = NOW()
+			  WHERE id = $7`
+	_, err := r.db.Exec(query,
+		user.Username,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.PasswordHash,
+		user.Status,
+		user.Id,
+	)
+	return err
 }

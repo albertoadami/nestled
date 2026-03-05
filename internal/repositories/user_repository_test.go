@@ -41,7 +41,7 @@ func TestCreateUserSucessfully(t *testing.T) {
 
 	user := createTestUser()
 
-	id, err := userRepo.CreateUser(user)
+	id, err := userRepo.Create(user)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -62,14 +62,14 @@ func TestCreateUserFailedDueToDuplicateUsername(t *testing.T) {
 	userRepo := NewUserRepository(db)
 
 	user := createTestUser()
-	_, err := userRepo.CreateUser(user)
+	_, err := userRepo.Create(user)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	user.Email = "test-duplicated@test.it"
 	user.Id = uuid.New()
-	_, err = userRepo.CreateUser(user)
+	_, err = userRepo.Create(user)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -89,14 +89,14 @@ func TestCreateUserFailedDueToDuplicateEmail(t *testing.T) {
 	userRepo := NewUserRepository(db)
 
 	user := createTestUser()
-	_, err := userRepo.CreateUser(user)
+	_, err := userRepo.Create(user)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
 	user.Username = "johndoe-duplicated"
 	user.Id = uuid.New()
-	_, err = userRepo.CreateUser(user)
+	_, err = userRepo.Create(user)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -114,7 +114,7 @@ func TestGetUserByUsernameSucessfully(t *testing.T) {
 
 	userRepo := NewUserRepository(db)
 	user := createTestUser()
-	_, err := userRepo.CreateUser(user)
+	_, err := userRepo.Create(user)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -151,7 +151,7 @@ func TestGetUserByIdSucessfully(t *testing.T) {
 
 	userRepo := NewUserRepository(db)
 	user := createTestUser()
-	_, err := userRepo.CreateUser(user)
+	_, err := userRepo.Create(user)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -178,4 +178,34 @@ func TestGetUserByIdFailedDueToNonExistingUser(t *testing.T) {
 	result, err := userRepo.GetUserById(uuid.New())
 	assert.Nil(t, err, "expected err to be nil")
 	assert.Nil(t, result, "expected result to be nil")
+}
+
+func TestUpdateUserSuccessfully(t *testing.T) {
+
+	db, terminate := testhelpers.SetupPostgres(t)
+	defer terminate()
+	truncateUsers(t, db)
+
+	userRepo := NewUserRepository(db)
+	user := createTestUser()
+	_, err := userRepo.Create(user)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	user.FirstName = "UpdatedFirstName"
+	err = userRepo.Update(user)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	retrievedUser, err := userRepo.GetUserById(user.Id)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if retrievedUser.FirstName != "UpdatedFirstName" {
+		t.Fatalf("expected first name %v, got %v", "UpdatedFirstName", retrievedUser.FirstName)
+	}
+
 }

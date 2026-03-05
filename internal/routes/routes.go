@@ -19,4 +19,5 @@ func SetupRoutes(r *gin.Engine, userHandler *handlers.UserHandler, healthHandler
 	apiGroup.POST("/register", userHandler.RegisterUser)
 	apiGroup.POST("/auth/token", authHandler.GenerateToken)
 	protected.GET("/users/me", userHandler.GetCurrentUser)
+	protected.PATCH("/users/me/password", userHandler.ChangePassword)
 }

@@ -18,7 +18,7 @@ type mockUserRepo struct {
 	getFnById func(id uuid.UUID) (*model.User, error)
 }
 
-func (m *mockUserRepo) CreateUser(user *model.User) (uuid.UUID, error) {
+func (m *mockUserRepo) Create(user *model.User) (uuid.UUID, error) {
 	return uuid.Nil, nil
 }
 
@@ -28,6 +28,10 @@ func (m *mockUserRepo) GetUserById(id uuid.UUID) (*model.User, error) {
 
 func (m *mockUserRepo) GetUserByUsername(username string) (*model.User, error) {
 	return m.getFn(username)
+}
+
+func (m *mockUserRepo) Update(user *model.User) error {
+	return nil
 }
 
 var tokenManager = auth.NewTokenManager(config.JWTConfig{Secret: "secret", Expiration: 1})
@@ -80,4 +84,37 @@ func TestGenerateToken_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, token)
 	assert.NotEmpty(t, token.Value)
+}
+
+func TestUpdatePasswordInvalidCurrentPassword(t *testing.T) {
+	hash, _ := crypto.HashPassword("current")
+	user := &model.User{Id: uuid.New(), PasswordHash: hash}
+
+	mockRepo := &mockUserRepo{
+		getFnById: func(userId uuid.UUID) (*model.User, error) {
+			return user, nil
+		},
+	}
+	service := NewUserService(mockRepo)
+
+	err := service.ChangePassword(user, "wrong", "newpass")
+	assert.ErrorIs(t, err, errors.ErrInvalidPassword)
+}
+
+func TestUpdatePasswordSuccess(t *testing.T) {
+	hash, _ := crypto.HashPassword("current")
+	user := &model.User{Id: uuid.New(), PasswordHash: hash}
+
+	mockRepo := &mockUserRepo{
+		getFnById: func(userId uuid.UUID) (*model.User, error) {
+			return user, nil
+		},
+	}
+	service := NewUserService(mockRepo)
+
+	err := service.ChangePassword(user, "current", "newpass")
+	assert.NoError(t, err)
+
+	// Verify that the password hash has been updated
+	assert.NotEqual(t, hash, user.PasswordHash)
 }
