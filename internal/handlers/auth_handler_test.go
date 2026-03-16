@@ -24,7 +24,7 @@ func setupUserAuthRouter(mockService *mockAuthService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := NewAuthHandler(mockService)
-	router.POST("/api/v1/auth/token", handler.GenerateToken)
+	router.POST("/api/v1/auth/token", handler.GenerateTokenHandler)
 	return router
 }
 

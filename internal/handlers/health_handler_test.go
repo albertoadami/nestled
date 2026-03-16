@@ -21,7 +21,7 @@ func TestHealthHandlerSuccess(t *testing.T) {
 	router := gin.New()
 	healthHandler := NewHealthHandler(db)
 
-	router.GET("/health", healthHandler.Health)
+	router.GET("/health", healthHandler.HealthHandler)
 
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -40,7 +40,7 @@ func TestHealthHandlerDBDown(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	healthHandler := NewHealthHandler(db)
-	router.GET("/health", healthHandler.Health)
+	router.GET("/health", healthHandler.HealthHandler)
 
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()

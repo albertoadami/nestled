@@ -23,7 +23,7 @@ func NewUserHandler(userService services.UserService, logger *zap.Logger) *UserH
 	}
 }
 
-func (u *UserHandler) RegisterUser(c *gin.Context) {
+func (u *UserHandler) RegisterUserHandler(c *gin.Context) {
 
 	var request dto.CreateUserRequest
 
@@ -58,7 +58,7 @@ func (u *UserHandler) RegisterUser(c *gin.Context) {
 
 }
 
-func (u *UserHandler) GetCurrentUser(c *gin.Context) {
+func (u *UserHandler) GetCurrentUserHandler(c *gin.Context) {
 	userId, ok := getUserIdFromContext(c)
 	if !ok {
 		return
@@ -79,7 +79,27 @@ func (u *UserHandler) GetCurrentUser(c *gin.Context) {
 	})
 }
 
-func (u *UserHandler) ChangePassword(c *gin.Context) {
+func (u *UserHandler) ActivateUserHandler(c *gin.Context) {
+	var request dto.ActivateUserToken
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := u.userService.ActivateUser(request.Token)
+	switch err {
+	case nil:
+		c.Status(http.StatusNoContent)
+	case errors.ErrInvalidToken:
+		c.JSON(http.StatusUnprocessableEntity, dto.NewErrorResponse(err.Error(), "The provided activation token is invalid or expired"))
+	default:
+		c.Status(http.StatusInternalServerError)
+	}
+
+}
+
+func (u *UserHandler) ChangePasswordHandler(c *gin.Context) {
 	var request dto.ChangePasswordRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {

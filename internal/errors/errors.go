@@ -10,4 +10,6 @@ var (
 	ErrInvalidToken          = errors.New("invalid token")
 	ErrGeneratingToken       = errors.New("error generating token")
 	ErrInvalidPassword       = errors.New("invalid password")
+	ErrInvalidTokenType      = errors.New("invalid token provided")
+	ErrNoRowsAffected        = errors.New("no rows affected by operation")
 )

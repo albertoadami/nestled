@@ -26,6 +26,7 @@ type mockUserService struct {
 	createUserFn      func(req *dto.CreateUserRequest) (uuid.UUID, error)
 	getByIdFn         func(id uuid.UUID) (*model.User, error)
 	returnUpdateError bool
+	isTokenValid      bool
 }
 
 func (m *mockUserService) CreateUser(req *dto.CreateUserRequest) (uuid.UUID, error) {
@@ -44,11 +45,19 @@ func (m *mockUserService) ChangePassword(user *model.User, currentPassword strin
 	}
 }
 
+func (m *mockUserService) ActivateUser(token string) error {
+	if m.isTokenValid {
+		return nil
+	} else {
+		return errors.ErrInvalidToken
+	}
+}
+
 func setupUserRouter(mockService *mockUserService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := NewUserHandler(mockService, zap.NewNop())
-	router.POST("/api/v1/users/register", handler.RegisterUser)
+	router.POST("/api/v1/users/register", handler.RegisterUserHandler)
 	return router
 }
 
@@ -57,8 +66,9 @@ func setUpUserProfileRouter(mockService *mockUserService, userId uuid.UUID) *gin
 	router := gin.New()
 	handler := NewUserHandler(mockService, zap.NewNop())
 	// apply mock authentication as middleware before the handler
-	router.GET("/api/v1/users/me", testhelpers.MockAuthentication(userId), handler.GetCurrentUser)
-	router.PATCH("/api/v1/users/me/password", testhelpers.MockAuthentication(userId), handler.ChangePassword)
+	router.GET("/api/v1/users/me", testhelpers.MockAuthentication(userId), handler.GetCurrentUserHandler)
+	router.PATCH("/api/v1/users/me/password", testhelpers.MockAuthentication(userId), handler.ChangePasswordHandler)
+	router.POST("api/v1/users/activate", handler.ActivateUserHandler)
 	return router
 }
 
@@ -239,5 +249,41 @@ func TestChangePasswordInvalidCurrentPassword(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+}
+
+func TestActivateUserWithValidToken(t *testing.T) {
+	userId := uuid.New()
+	mockService := &mockUserService{isTokenValid: true}
+
+	router := setUpUserProfileRouter(mockService, userId)
+
+	activateUserRequest := &dto.ActivateUserToken{Token: "test-token"}
+	body, _ := json.Marshal(activateUserRequest)
+
+	req, _ := http.NewRequest("POST", "/api/v1/users/activate", bytes.NewReader(body))
+	req.Header.Set("Content'Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+
+}
+
+func TestActivateUserWithInvalidToken(t *testing.T) {
+	userId := uuid.New()
+	mockService := &mockUserService{isTokenValid: false}
+
+	router := setUpUserProfileRouter(mockService, userId)
+
+	activateUserRequest := &dto.ActivateUserToken{Token: "test-token"}
+	body, _ := json.Marshal(activateUserRequest)
+
+	req, _ := http.NewRequest("POST", "/api/v1/users/activate", bytes.NewReader(body))
+	req.Header.Set("Content'Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
 
 }

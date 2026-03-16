@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/albertoadami/nestled/internal/crypto"
 	"github.com/albertoadami/nestled/internal/dto"
 	"github.com/albertoadami/nestled/internal/errors"
@@ -13,15 +15,18 @@ type UserService interface {
 	CreateUser(request *dto.CreateUserRequest) (uuid.UUID, error)
 	GetUserById(id uuid.UUID) (*model.User, error)
 	ChangePassword(user *model.User, currentPassword string, newPassword string) error
+	ActivateUser(token string) error
 }
 
 type userService struct {
-	userRepository repositories.UserRepository
+	userRepository            repositories.UserRepository
+	activationTokenRepository repositories.ActivationTokenRepository
 }
 
-func NewUserService(userRepository repositories.UserRepository) UserService {
+func NewUserService(userRepository repositories.UserRepository, tokenRepsoitory repositories.ActivationTokenRepository) UserService {
 	return &userService{
-		userRepository: userRepository,
+		userRepository:            userRepository,
+		activationTokenRepository: tokenRepsoitory,
 	}
 }
 
@@ -64,5 +69,37 @@ func (s *userService) ChangePassword(user *model.User, currentPassword string, n
 	user.PasswordHash = hashedPassword
 
 	return s.userRepository.Update(user)
+}
 
+func (s *userService) ActivateUser(token string) error {
+
+	activationToken, err := s.activationTokenRepository.GetByToken(token)
+
+	if err != nil {
+		return err
+	}
+
+	if activationToken == nil {
+		return errors.ErrInvalidToken
+	}
+	if time.Now().After(activationToken.ExpiresAt) {
+		return errors.ErrInvalidToken
+	}
+
+	user, err := s.userRepository.GetUserById(activationToken.UserId)
+
+	if err != nil {
+		return err
+	}
+
+	if user == nil {
+		return errors.ErrInvalidToken
+	}
+
+	user.Status = model.UserStatusActive
+	if err = s.userRepository.Update(user); err != nil {
+		return err
+	}
+
+	return s.activationTokenRepository.DeleteById(activationToken.Id)
 }

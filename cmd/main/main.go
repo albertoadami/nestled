@@ -35,9 +35,10 @@ func main() {
 
 	// repositories
 	userRepository := repositories.NewUserRepository(database)
+	activationTokenRepository := repositories.NewActivationTokenRepository(database)
 
 	// services
-	userService := services.NewUserService(userRepository)
+	userService := services.NewUserService(userRepository, activationTokenRepository)
 	authService := services.NewAuthService(userRepository, tokenManager)
 
 	// Initialize handlers

@@ -19,7 +19,7 @@ func NewAuthHandler(authService services.AuthService) *AuthHandler {
 	}
 }
 
-func (h *AuthHandler) GenerateToken(c *gin.Context) {
+func (h *AuthHandler) GenerateTokenHandler(c *gin.Context) {
 	var request dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
